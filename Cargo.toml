@@ -1,0 +1,10 @@
+[package]
+name = "iceccd"
+version = "0.1.0"
+authors = ["Trevor Saunders <tbsaunde@tbsaunde.org>"]
+
+[dependencies]
+get_if_addrs = "0.4.0"
+byteorder = "0.5.3"
+[dependencies.resolve]
+git = 'https://github.com/murarth/resolve'

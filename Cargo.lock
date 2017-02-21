@@ -4,6 +4,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "get_if_addrs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "minilzo 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "resolve 0.1.2 (git+https://github.com/murarth/resolve)",
 ]
 
@@ -57,6 +58,23 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "minilzo"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "minilzo-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "minilzo-sys"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rand"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -88,3 +106,18 @@ name = "unicode-normalization"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
+[metadata]
+"checksum byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "0fc10e8cc6b2580fda3f36eb6dc5316657f812a3df879a44a66fc9f0fdbc4855"
+"checksum c_linked_list 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "48754957a925b4554473af6c83fe05c2fdc9319f7636f6fc29b6969c73eb8fc0"
+"checksum get_if_addrs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "16ded284f5ef9a7560a3488fd0fbc81ec931c373823d9f9b32336055763f4821"
+"checksum idna 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1053236e00ce4f668aeca4a769a09b3bf5a682d802abd6f3cb39374f6b162c11"
+"checksum libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "e32a70cf75e5846d53a673923498228bbec6a8624708a9ea5645f075d6276122"
+"checksum libc 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)" = "23e3757828fa702a20072c37ff47938e9dd331b92fac6e223d26d4b7a55f7ee2"
+"checksum log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ab83497bf8bf4ed2a74259c1c802351fcd67a65baa86394b6ba73c36f4838054"
+"checksum matches 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "15305656809ce5a4805b1ff2946892810992197ce1270ff79baded852187942e"
+"checksum minilzo 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d3b43c495924db807fb0dae9632d7092cacbe9537767e5e15eff90798ac36c3a"
+"checksum minilzo-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ce123edaa554212f9aef7466ae6805c59ce71edd79ead0c2aa8e828e444de9e5"
+"checksum rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2791d88c6defac799c3f20d74f094ca33b9332612d9aef9078519c82e4fe04a5"
+"checksum resolve 0.1.2 (git+https://github.com/murarth/resolve)" = "<none>"
+"checksum unicode-bidi 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c1f7ceb96afdfeedee42bade65a0d585a6a0106f681b6749c8ff4daa8df30b3f"
+"checksum unicode-normalization 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "26643a2f83bac55f1976fb716c10234485f9202dcd65cfbdf9da49867b271172"

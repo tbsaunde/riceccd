@@ -101,8 +101,12 @@ fn read_string(sock: &mut TcpStream) -> String
 let len = read_u32be(sock) as usize;
 let mut buf: Vec<u8> = Vec::with_capacity(len);
 buf.resize(len, 0);
-let ret = sock.read(buf.as_mut_slice()).expect("read string");
-assert_eq!(ret, len);
+let mut read :usize = 0;
+while read < len {
+let mut buf_slice = &mut buf[read..len];
+read += sock.read(buf_slice).expect("read string");
+}
+buf.pop();
 String::from_utf8(buf).expect("parse utf8")
 }
 

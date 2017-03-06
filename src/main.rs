@@ -208,8 +208,18 @@ sched_sock.set_nodelay(true).expect("nodelay");
 // sched_sock.set_nonblocking(true).expect("nonblocking");
 println!("{:#?}", sched_sock);
 
-let protobuf = [35, 0, 0, 0, 35, 0, 0, 0];
+let protobuf = [35, 0, 0, 0];
 sched_sock.write(&protobuf).expect("write proto");
+
+// Get the maximum protocol version we have in common with the scheduler.
+let proto = read_u32le(&mut sched_sock);
+println!("proto version {}", proto);
+
+let protobuf = [proto as u8, 0, 0, 0];
+sched_sock.write(&protobuf).expect("write proto");
+
+let proto = read_u32le(&mut sched_sock);
+println!("proto version {}", proto);
 
 let host_name :String = resolve::hostname::get_hostname().expect("hostname");
 println!("{}", host_name);
@@ -222,13 +232,6 @@ login_msg.append_str("x86_64");
 login_msg.append_u32(0); // chroot_possible is false.
 login_msg.append_u32(1); // noremote.
 send_msg(&mut sched_sock, &login_msg);
-
-let proto = read_u32le(&mut sched_sock);
-println!("proto version {}", proto);
-
-// We seem to get the protocol version twice.
-let proto = read_u32le(&mut sched_sock);
-println!("proto version {}", proto);
 
 let mut stats_msg = Msg::new(81);
 stats_msg.append_u32(0);

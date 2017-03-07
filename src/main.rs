@@ -116,14 +116,14 @@ fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: boo
 let mut cssock = TcpStream::connect((host, port as u16)).expect("connect");
 if !got_env {
 let mut env_transfer_msg = Msg::new(88);
-env_transfer_msg.append_str("/tmp/foo.tar.gz");
+env_transfer_msg.append_str("foo.tar.gz");
 env_transfer_msg.append_str(host_platform);
 send_msg(&mut cssock, &env_transfer_msg);
 send_file(&mut cssock, "/tmp/foo.tar.gz");
 send_msg(&mut cssock, &Msg::new(67));
 
 let mut verify_msg = Msg::new(93);
-verify_msg.append_str("/tmp/foo.tar.gz");
+verify_msg.append_str("foo.tar.gz");
 verify_msg.append_str("x86_64");
 send_msg(&mut cssock, &verify_msg);
 display_msg(&mut cssock);
@@ -248,7 +248,7 @@ send_msg(&mut sched_sock, &stats_msg);
 display_msg(&mut sched_sock);
 
 let mut get_cs_msg = Msg::new(71);
-let envs = vec!(("x86_64", "/tmp/foo.tar.gz"));
+let envs = vec!(("x86_64", "foo.tar.gz"));
 get_cs_msg.append_envs(envs);
 get_cs_msg.append_str("/tmp/test-icecc.c");
 get_cs_msg.append_u32(0);

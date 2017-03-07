@@ -72,9 +72,9 @@ let len = f.read_to_end(&mut buf).expect("read file");
 for chunk in buf.chunks(100000) {
 let mut fcmsg = Msg::new(74);
 fcmsg.append_u32(chunk.len() as u32);
-let mut compressed = minilzo::compress(buf.as_slice()).expect("compression");
-fcmsg.append_u32(compressed.len() as u32);
-fcmsg.data.append(&mut compressed);
+ let mut compressed = minilzo::compress(chunk).expect("compression");
+ fcmsg.append_u32(compressed.len() as u32);
+ fcmsg.data.append(&mut compressed);
 send_msg(sock, &fcmsg);
 }
 }

@@ -111,9 +111,29 @@ buf.pop();
 String::from_utf8(buf).expect("parse utf8")
 }
 
+fn negotiate_proto(sock :&mut TcpStream) -> u32
+{
+let protobuf = [35, 0, 0, 0];
+sock.write(&protobuf).expect("write proto");
+
+// Get the maximum protocol version we have in common with the scheduler or daemon.
+let proto = read_u32le(sock);
+println!("proto version {}", proto);
+
+let protobuf = [proto as u8, 0, 0, 0];
+sock.write(&protobuf).expect("write proto");
+
+let proto = read_u32le(sock);
+println!("proto version {}", proto);
+
+proto
+}
+
 fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: bool)
 {
 let mut cssock = TcpStream::connect((host, port as u16)).expect("connect");
+println!("connected to cs");
+negotiate_proto(&mut cssock);
 if !got_env {
 let mut env_transfer_msg = Msg::new(88);
 env_transfer_msg.append_str("foo.tar.gz");
@@ -213,18 +233,7 @@ sched_sock.set_nodelay(true).expect("nodelay");
 // sched_sock.set_nonblocking(true).expect("nonblocking");
 println!("{:#?}", sched_sock);
 
-let protobuf = [35, 0, 0, 0];
-sched_sock.write(&protobuf).expect("write proto");
-
-// Get the maximum protocol version we have in common with the scheduler.
-let proto = read_u32le(&mut sched_sock);
-println!("proto version {}", proto);
-
-let protobuf = [proto as u8, 0, 0, 0];
-sched_sock.write(&protobuf).expect("write proto");
-
-let proto = read_u32le(&mut sched_sock);
-println!("proto version {}", proto);
+negotiate_proto(&mut sched_sock);
 
 let host_name :String = resolve::hostname::get_hostname().expect("hostname");
 println!("{}", host_name);

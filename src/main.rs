@@ -142,7 +142,7 @@ match msgtype {
 let max_scheduler_pong = read_u32be(sock);
 let max_scheduler_ping = read_u32be(sock);
 let bench_source = read_string(sock);
-println!("max scheduler pong {} max scheduler ping {} bench_source \"{}\"", max_scheduler_pong, max_scheduler_ping, bench_source);
+println!("max scheduler pong {} max scheduler ping {}", max_scheduler_pong, max_scheduler_ping);
 }
 72 => {
 //let ret = sock.read(buf.as_mut_slice()).expect("read buf");

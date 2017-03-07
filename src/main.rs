@@ -55,7 +55,8 @@ self.data.len() + 4
 
 fn send_msg(sock: &mut TcpStream, msg: &Msg)
 {
-let len = [0, 0, 0, msg.len() as u8]; // fix me
+assert!(msg.len() < 1000000);
+let len = [0, (msg.len() >> 16) as u8, (msg.len() >> 8) as u8, msg.len() as u8]; // fix me
 sock.write(&len);
 let typebuf = [0, 0, 0, msg.msgtype as u8];
 sock.write(&typebuf).expect("write type");

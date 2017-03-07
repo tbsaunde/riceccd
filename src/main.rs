@@ -157,7 +157,11 @@ let matched_job_id = read_u32be(sock);
 println!("job {} assigned to {}:{} platform {} got_env {} for client {} matched {}", job_id, host, port, host_platform, got_env, client_id, matched_job_id);
 run_job(&host, port, &host_platform, job_id, got_env != 0);
 }
-	i =>  { println!("unmatched") }
+94 => {
+let val = read_u32be(sock);
+println!("verification of env is {}", val);
+}
+	i =>  { println!("unmatched type {}", msgtype) }
 }
 }
 

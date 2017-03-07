@@ -61,7 +61,7 @@ sock.write(&len);
 let typebuf = [0, 0, 0, msg.msgtype as u8];
 sock.write(&typebuf).expect("write type");
 let write_len = sock.write(msg.data.as_slice()).expect("write");
-println!("sent packet {}", write_len);
+println!("sent packet type {} length {}", msg.msgtype, write_len);
 }
 
 fn send_file(sock: &mut TcpStream, path: &str)

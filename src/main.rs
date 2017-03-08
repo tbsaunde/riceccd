@@ -1,4 +1,4 @@
-use std::net::{TcpStream, UdpSocket};
+use std::net::{TcpStream, UdpSocket, ToSocketAddrs};
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -50,6 +50,37 @@ impl Msg
     fn len(&self) -> usize
     {
         self.data.len() + 4
+    }
+}
+
+struct MsgChannel
+{
+    stream :TcpStream,
+    protocol :u32,
+}
+
+impl MsgChannel
+{
+    fn new<A: ToSocketAddrs>(addr: A) -> MsgChannel
+    {
+        let mut sock = TcpStream::connect(addr).expect("connect");
+        let protobuf = [35, 0, 0, 0];
+        sock.write(&protobuf).expect("write proto");
+
+        // Get the maximum protocol version we have in common with the scheduler or daemon.
+        let proto = read_u32le(&mut sock);
+        println!("proto version {}", proto);
+
+        let protobuf = [proto as u8, 0, 0, 0];
+        sock.write(&protobuf).expect("write proto");
+
+        let proto = read_u32le(&mut sock);
+        println!("proto version {}", proto);
+
+        MsgChannel{
+            stream: sock,
+            protocol: proto
+        }
     }
 }
 
@@ -111,25 +142,7 @@ fn read_string(sock: &mut TcpStream) -> String
     String::from_utf8(buf).expect("parse utf8")
 }
 
-fn negotiate_proto(sock :&mut TcpStream) -> u32
-{
-    let protobuf = [35, 0, 0, 0];
-    sock.write(&protobuf).expect("write proto");
-
-    // Get the maximum protocol version we have in common with the scheduler or daemon.
-    let proto = read_u32le(sock);
-    println!("proto version {}", proto);
-
-    let protobuf = [proto as u8, 0, 0, 0];
-    sock.write(&protobuf).expect("write proto");
-
-    let proto = read_u32le(sock);
-    println!("proto version {}", proto);
-
-    proto
-}
-
-fn send_compile_file_msg(sock :&mut TcpStream, protocol :u32, job_id :u32)
+fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
 {
     let mut msg = Msg::new(73);
     msg.append_u32(0); // language of source
@@ -139,86 +152,84 @@ fn send_compile_file_msg(sock :&mut TcpStream, protocol :u32, job_id :u32)
     msg.append_str("foo.tar.gz"); // environment
     msg.append_str("x86_64"); // target platform
     msg.append_str("gcc"); // compiler name
-    if protocol >= 34 {
+    if stream.protocol >= 34 {
         msg.append_str("bar.c"); // input file
         msg.append_str("/tmp/"); // cwd
     }
-    if protocol >= 35 {
+    if stream.protocol >= 35 {
         msg.append_str("bar.o"); // output file name
         msg.append_u32(0); // dwo enabled
     }
 
-    send_msg(sock, &msg);
+    send_msg(&mut stream.stream, &msg);
 }
 
 fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: bool)
 {
-    let mut cssock = TcpStream::connect((host, port as u16)).expect("connect");
-    println!("connected to cs");
-    let protocol = negotiate_proto(&mut cssock);
+    let mut cssock = MsgChannel::new((host, port as u16));
     if !got_env {
         let mut env_transfer_msg = Msg::new(88);
         env_transfer_msg.append_str("foo.tar.gz");
         env_transfer_msg.append_str(host_platform);
-        send_msg(&mut cssock, &env_transfer_msg);
-        send_file(&mut cssock, "/tmp/foo.tar.gz");
-        send_msg(&mut cssock, &Msg::new(67));
+        send_msg(&mut cssock.stream, &env_transfer_msg);
+        send_file(&mut cssock.stream, "/tmp/foo.tar.gz");
+        send_msg(&mut cssock.stream, &Msg::new(67));
 
         let mut verify_msg = Msg::new(93);
         verify_msg.append_str("foo.tar.gz");
         verify_msg.append_str("x86_64");
-        send_msg(&mut cssock, &verify_msg);
+        send_msg(&mut cssock.stream, &verify_msg);
         display_msg(&mut cssock);
     }
 
-    send_compile_file_msg(&mut cssock, protocol, job_id);
-    send_file(&mut cssock, "/tmp/bar.c");
-    send_msg(&mut cssock, &Msg::new(67));
+    send_compile_file_msg(&mut cssock, job_id);
+    send_file(&mut cssock.stream, "/tmp/bar.c");
+    send_msg(&mut cssock.stream, &Msg::new(67));
     loop {
         display_msg(&mut cssock);
     }
 }
 
-fn display_msg(sock: &mut TcpStream)
+fn display_msg(sock: &mut MsgChannel)
 {
-    let msglen = read_u32be(sock);
-    let msgtype = read_u32be(sock);
+    let msglen = read_u32be(&mut sock.stream);
+    let msgtype = read_u32be(&mut sock.stream);
     println!("msg length {} type {}", msglen, msgtype);
     let mut buf: Vec<u8> = Vec::with_capacity(msglen as usize);
     buf.resize(msglen as usize, 0);
     match msgtype {
         92 => {
-            let max_scheduler_pong = read_u32be(sock);
-            let max_scheduler_ping = read_u32be(sock);
-            let bench_source = read_string(sock);
+            let max_scheduler_pong = read_u32be(&mut sock.stream);
+            let max_scheduler_ping = read_u32be(&mut sock.stream);
+            let bench_source = read_string(&mut sock.stream);
             println!("max scheduler pong {} max scheduler ping {}", max_scheduler_pong, max_scheduler_ping);
         }
         72 => {
             //let ret = sock.read(buf.as_mut_slice()).expect("read buf");
             //println!("data {:?}", buf);
-            let job_id = read_u32be(sock);
-            let port = read_u32be(sock);
-            let host = read_string(sock);
-            let host_platform = read_string(sock);
-            let got_env = read_u32be(sock);
-            let client_id = read_u32be(sock);
-            let matched_job_id = read_u32be(sock);
+            let job_id = read_u32be(&mut sock.stream);
+            let port = read_u32be(&mut sock.stream);
+            let host = read_string(&mut sock.stream);
+            let host_platform = read_string(&mut sock.stream);
+            let got_env = read_u32be(&mut sock.stream);
+            let client_id = read_u32be(&mut sock.stream);
+            let matched_job_id = read_u32be(&mut sock.stream);
             println!("job {} assigned to {}:{} platform {} got_env {} for client {} matched {}", job_id, host, port, host_platform, got_env, client_id, matched_job_id);
             run_job(&host, port, &host_platform, job_id, got_env != 0);
         }
         94 => {
-            let val = read_u32be(sock);
+            let val = read_u32be(&mut sock.stream);
             println!("verification of env is {}", val);
         }
         75 => {
-            let stderr = read_string(sock);
-            let stdout = read_string(sock);
-            let status = read_u32be(sock);
-            let oom = read_u32be(sock);
+            let stderr = read_string(&mut sock.stream);
+            let stdout = read_string(&mut sock.stream);
+            let status = read_u32be(&mut sock.stream);
+            let oom = read_u32be(&mut sock.stream);
             println!("compile finished status {} stdout {} stderr {}  oom {}", status, stdout, stderr, oom);
         }
         90 => {
-            let str = read_string(sock);
+            let str = read_string(&mut sock.stream);
             println!("status text: {}", str);
         }
         67 => {
@@ -272,12 +283,10 @@ fn main()
         }
     }
 
-    let mut sched_sock = TcpStream::connect(sched.unwrap()).expect("tcp");
-    sched_sock.set_nodelay(true).expect("nodelay");
+    let mut sched_sock = MsgChannel::new(sched.unwrap());
+    sched_sock.stream.set_nodelay(true).expect("nodelay");
     // sched_sock.set_nonblocking(true).expect("nonblocking");
-    println!("{:#?}", sched_sock);
-
-    negotiate_proto(&mut sched_sock);
+    println!("{:#?}", sched_sock.stream);
 
     let host_name :String = resolve::hostname::get_hostname().expect("hostname");
     println!("{}", host_name);
@@ -289,14 +298,14 @@ fn main()
     login_msg.append_str("x86_64");
     login_msg.append_u32(0); // chroot_possible is false.
     login_msg.append_u32(1); // noremote.
-    send_msg(&mut sched_sock, &login_msg);
+    send_msg(&mut sched_sock.stream, &login_msg);
 
     let mut stats_msg = Msg::new(81);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
-    send_msg(&mut sched_sock, &stats_msg);
+    send_msg(&mut sched_sock.stream, &stats_msg);
 
     display_msg(&mut sched_sock);
 
@@ -311,7 +320,7 @@ fn main()
     get_cs_msg.append_u32(53);
     get_cs_msg.append_str("");
     get_cs_msg.append_u32(0);
-    send_msg(&mut sched_sock, &get_cs_msg);
+    send_msg(&mut sched_sock.stream, &get_cs_msg);
 
     loop {
         display_msg(&mut sched_sock);

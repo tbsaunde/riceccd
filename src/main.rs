@@ -181,6 +181,20 @@ run_job(&host, port, &host_platform, job_id, got_env != 0);
 let val = read_u32be(sock);
 println!("verification of env is {}", val);
 }
+75 => {
+let stderr = read_string(sock);
+let stdout = read_string(sock);
+let status = read_u32be(sock);
+let oom = read_u32be(sock);
+println!("compile finished status {} stdout {} stderr {}  oom {}", status, stdout, stderr, oom);
+}
+90 => {
+let str = read_string(sock);
+println!("status text: {}", str);
+}
+67 => {
+println!("end msg");
+}
 	i =>  { println!("unmatched type {}", msgtype) }
 }
 }

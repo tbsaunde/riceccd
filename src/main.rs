@@ -129,11 +129,33 @@ println!("proto version {}", proto);
 proto
 }
 
+fn send_compile_file_msg(sock :&mut TcpStream, protocol :u32, job_id :u32)
+{
+let mut msg = Msg::new(73);
+msg.append_u32(0); // language of source
+msg.append_u32(job_id);
+msg.append_u32(0); // remote flags
+msg.append_u32(0); // rest flags
+msg.append_str("foo.tar.gz"); // environment
+msg.append_str("x86_64"); // target platform
+msg.append_str("gcc"); // compiler name
+if protocol >= 34 {
+msg.append_str("bar.c"); // input file
+msg.append_str("/tmp/"); // cwd
+}
+if protocol >= 35 {
+msg.append_str("bar.o"); // output file name
+msg.append_u32(0); // dwo enabled
+}
+
+send_msg(sock, &msg);
+}
+
 fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: bool)
 {
 let mut cssock = TcpStream::connect((host, port as u16)).expect("connect");
 println!("connected to cs");
-negotiate_proto(&mut cssock);
+let protocol = negotiate_proto(&mut cssock);
 if !got_env {
 let mut env_transfer_msg = Msg::new(88);
 env_transfer_msg.append_str("foo.tar.gz");
@@ -146,6 +168,13 @@ let mut verify_msg = Msg::new(93);
 verify_msg.append_str("foo.tar.gz");
 verify_msg.append_str("x86_64");
 send_msg(&mut cssock, &verify_msg);
+display_msg(&mut cssock);
+}
+
+send_compile_file_msg(&mut cssock, protocol, job_id);
+send_file(&mut cssock, "/tmp/bar.c");
+send_msg(&mut cssock, &Msg::new(67));
+loop {
 display_msg(&mut cssock);
 }
 }

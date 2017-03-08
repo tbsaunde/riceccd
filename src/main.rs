@@ -10,15 +10,28 @@ extern crate resolve;
 extern crate byteorder;
 extern crate minilzo;
 
+#[derive(Copy, Clone)]
+enum MsgType
+{
+    END = 67,
+    GET_CS = 71,
+    COMPILE_FILE = 73,
+    FILE_CHUNK = 74,
+    LOGIN = 80,
+    STATS = 81,
+    ENV_TRANSFER = 88,
+    VERIFY_ENV = 93,
+}
+
 struct Msg
 {
-    msgtype: u32,
+    msgtype: MsgType,
     data: Vec<u8>,
 }
 
 impl Msg
 {
-    fn new(msgtype: u32) -> Msg
+    fn new(msgtype: MsgType) -> Msg
     {
         Msg{
             msgtype: msgtype,
@@ -92,7 +105,7 @@ fn send_msg(sock: &mut TcpStream, msg: &Msg)
     let typebuf = [0, 0, 0, msg.msgtype as u8];
     sock.write(&typebuf).expect("write type");
     let write_len = sock.write(msg.data.as_slice()).expect("write");
-    println!("sent packet type {} length {}", msg.msgtype, write_len);
+    println!("sent packet type {} length {}", msg.msgtype as u32, write_len);
 }
 
 fn send_file(sock: &mut TcpStream, path: &str)
@@ -101,7 +114,7 @@ fn send_file(sock: &mut TcpStream, path: &str)
     let mut buf: Vec<u8> = Vec::new();
     let len = f.read_to_end(&mut buf).expect("read file");
     for chunk in buf.chunks(100000) {
-        let mut fcmsg = Msg::new(74);
+        let mut fcmsg = Msg::new(MsgType::FILE_CHUNK);
         fcmsg.append_u32(chunk.len() as u32);
         let mut compressed = minilzo::compress(chunk).expect("compression");
         fcmsg.append_u32(compressed.len() as u32);
@@ -144,7 +157,7 @@ fn read_string(sock: &mut TcpStream) -> String
 
 fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
 {
-    let mut msg = Msg::new(73);
+    let mut msg = Msg::new(MsgType::COMPILE_FILE);
     msg.append_u32(0); // language of source
     msg.append_u32(job_id);
     msg.append_u32(0); // remote flags
@@ -168,14 +181,14 @@ fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: boo
 {
     let mut cssock = MsgChannel::new((host, port as u16));
     if !got_env {
-        let mut env_transfer_msg = Msg::new(88);
+        let mut env_transfer_msg = Msg::new(MsgType::ENV_TRANSFER);
         env_transfer_msg.append_str("foo.tar.gz");
         env_transfer_msg.append_str(host_platform);
         send_msg(&mut cssock.stream, &env_transfer_msg);
         send_file(&mut cssock.stream, "/tmp/foo.tar.gz");
-        send_msg(&mut cssock.stream, &Msg::new(67));
+        send_msg(&mut cssock.stream, &Msg::new(MsgType::END));
 
-        let mut verify_msg = Msg::new(93);
+        let mut verify_msg = Msg::new(MsgType::VERIFY_ENV);
         verify_msg.append_str("foo.tar.gz");
         verify_msg.append_str("x86_64");
         send_msg(&mut cssock.stream, &verify_msg);
@@ -184,7 +197,7 @@ fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: boo
 
     send_compile_file_msg(&mut cssock, job_id);
     send_file(&mut cssock.stream, "/tmp/bar.c");
-    send_msg(&mut cssock.stream, &Msg::new(67));
+    send_msg(&mut cssock.stream, &Msg::new(MsgType::END));
     loop {
         display_msg(&mut cssock);
     }
@@ -290,7 +303,7 @@ fn main()
 
     let host_name :String = resolve::hostname::get_hostname().expect("hostname");
     println!("{}", host_name);
-    let mut login_msg = Msg::new(80);
+    let mut login_msg = Msg::new(MsgType::LOGIN);
     login_msg.append_u32(0); // not supporting remote connections so port 0 is fine.
     login_msg.append_u32(8); // not supporting remote connections so this doesn't really matter.
     login_msg.append_u32(0); // no envs.
@@ -300,7 +313,7 @@ fn main()
     login_msg.append_u32(1); // noremote.
     send_msg(&mut sched_sock.stream, &login_msg);
 
-    let mut stats_msg = Msg::new(81);
+    let mut stats_msg = Msg::new(MsgType::STATS);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
@@ -309,7 +322,7 @@ fn main()
 
     display_msg(&mut sched_sock);
 
-    let mut get_cs_msg = Msg::new(71);
+    let mut get_cs_msg = Msg::new(MsgType::GET_CS);
     let envs = vec!(("x86_64", "foo.tar.gz"));
     get_cs_msg.append_envs(envs);
     get_cs_msg.append_str("/tmp/test-icecc.c");

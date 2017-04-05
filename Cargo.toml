@@ -6,6 +6,8 @@ authors = ["Trevor Saunders <tbsaunde@tbsaunde.org>"]
 [dependencies]
 get_if_addrs = "0.4.0"
 byteorder = "0.5.3"
-minilzo = "0.1.1"
+clap = "2"
+local-socket = { git = "https://github.com/tbsaunde/local-socket" }
+minilzo = { git = "https://github.com/tbsaunde/minilzo-rs" }
 [dependencies.resolve]
 git = 'https://github.com/murarth/resolve'

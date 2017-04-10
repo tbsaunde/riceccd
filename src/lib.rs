@@ -182,7 +182,7 @@ fn get_cs(con: &mut MsgChannel, file: &str)
     let mut get_cs_msg = Msg::new(MsgType::GET_CS);
     let envs = vec!(("x86_64", "foo.tar.gz"));
     get_cs_msg.append_envs(envs);
-    get_cs_msg.append_str("/tmp/test-icecc.c");
+    get_cs_msg.append_str(file);
     get_cs_msg.append_u32(0);
     get_cs_msg.append_u32(1);
     get_cs_msg.append_str("x86_64");

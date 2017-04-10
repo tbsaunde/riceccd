@@ -73,10 +73,10 @@ fn main()
     }
 
     println!("sent packet");
-    let mut sched: Option<std::net::SocketAddr> = None;
+    let mut sched: Option<std::net::SocketAddr>;
     loop {
         let mut ans = [0; 30];
-        let (amt, s) = sock.recv_from(&mut ans).expect("read");
+        let (_, s) = sock.recv_from(&mut ans).expect("read");
         let mut net : String = String::new();
         for x in &ans {
             if *x != 0 {

@@ -180,14 +180,31 @@ pub fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
 pub fn get_cs(con: &mut MsgChannel, file: &str, lang: SourceLanguage)
 {
     let mut get_cs_msg = Msg::new(MsgType::GetCS);
+
+    // a set of (host platform, tool chain file) pairs for each platform we have a toolchain for.
+    // Currently we just hardcode this.
     let envs = vec!(("x86_64", "foo.tar.gz"));
     get_cs_msg.append_envs(envs);
+
+    // information about the file we'll compile to show to things monitoring jobs.
     get_cs_msg.append_str(file);
     get_cs_msg.append_u32(lang as u32);
+
+    // the number of jobs we'd like to run, this is only used by icecream when compiling a file
+    // multiple times which we don't do yet.
     get_cs_msg.append_u32(1);
+
+    // the type of platform we would prefer the compile server be.
     get_cs_msg.append_str("x86_64");
+
+    // argument flags, aparently only used in calculating speed of compile servers so unimplemented
+    // for now.
     get_cs_msg.append_u32(0);
+
+    // client id is really a daemon id that requested a compile server allocation from the scheduler.
     get_cs_msg.append_u32(53);
+
+    // preferred host is to use a particular daemon, we don't support that yet.
     get_cs_msg.append_str("");
     get_cs_msg.append_u32(0);
     send_msg(&mut con.stream, &get_cs_msg);

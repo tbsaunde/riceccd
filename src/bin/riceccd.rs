@@ -54,7 +54,7 @@ fn run_daemon(network: & str, local_socket: & str)
 
     let host_name :String = resolve::hostname::get_hostname().expect("hostname");
     println!("{}", host_name);
-    let mut login_msg = Msg::new(MsgType::LOGIN);
+    let mut login_msg = Msg::new(MsgType::Login);
     login_msg.append_u32(0); // not supporting remote connections so port 0 is fine.
     login_msg.append_u32(8); // not supporting remote connections so this doesn't really matter.
     login_msg.append_u32(0); // no envs.
@@ -64,7 +64,7 @@ fn run_daemon(network: & str, local_socket: & str)
     login_msg.append_u32(1); // noremote.
     send_msg(&mut sched_sock.stream, &login_msg);
 
-    let mut stats_msg = Msg::new(MsgType::STATS);
+    let mut stats_msg = Msg::new(MsgType::Stats);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);

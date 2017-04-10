@@ -13,14 +13,14 @@ extern crate minilzo;
 #[derive(Copy, Clone,Debug)]
 pub enum MsgType
 {
-    END = 67,
-    GET_CS = 71,
-    COMPILE_FILE = 73,
-    FILE_CHUNK = 74,
-    LOGIN = 80,
-    STATS = 81,
-    ENV_TRANSFER = 88,
-    VERIFY_ENV = 93,
+    End = 67,
+    GetCS = 71,
+    CompileFile = 73,
+    FileChunk = 74,
+    Login = 80,
+    Stats = 81,
+    EnvTransfer = 88,
+    VerifyEnv = 93,
 }
 
 pub struct Msg
@@ -114,7 +114,7 @@ fn send_file(sock: &mut TcpStream, path: &str)
     let mut buf: Vec<u8> = Vec::new();
     let len = f.read_to_end(&mut buf).expect("read file");
     for chunk in buf.chunks(100000) {
-        let mut fcmsg = Msg::new(MsgType::FILE_CHUNK);
+        let mut fcmsg = Msg::new(MsgType::FileChunk);
         fcmsg.append_u32(chunk.len() as u32);
         let mut compressed = minilzo::compress(chunk).expect("compression");
         fcmsg.append_u32(compressed.len() as u32);
@@ -157,7 +157,7 @@ fn read_string(sock: &mut TcpStream) -> String
 
 pub fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
 {
-    let mut msg = Msg::new(MsgType::COMPILE_FILE);
+    let mut msg = Msg::new(MsgType::CompileFile);
     msg.append_u32(0); // language of source
     msg.append_u32(job_id);
     msg.append_u32(0); // remote flags
@@ -179,7 +179,7 @@ pub fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
 
 pub fn get_cs(con: &mut MsgChannel, file: &str, lang: SourceLanguage)
 {
-    let mut get_cs_msg = Msg::new(MsgType::GET_CS);
+    let mut get_cs_msg = Msg::new(MsgType::GetCS);
     let envs = vec!(("x86_64", "foo.tar.gz"));
     get_cs_msg.append_envs(envs);
     get_cs_msg.append_str(file);
@@ -197,14 +197,14 @@ pub fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env:
 {
     let mut cssock = MsgChannel::new((host, port as u16));
     if !got_env {
-        let mut env_transfer_msg = Msg::new(MsgType::ENV_TRANSFER);
+        let mut env_transfer_msg = Msg::new(MsgType::EnvTransfer);
         env_transfer_msg.append_str("foo.tar.gz");
         env_transfer_msg.append_str(host_platform);
         send_msg(&mut cssock.stream, &env_transfer_msg);
         send_file(&mut cssock.stream, "/tmp/foo.tar.gz");
-        send_msg(&mut cssock.stream, &Msg::new(MsgType::END));
+        send_msg(&mut cssock.stream, &Msg::new(MsgType::End));
 
-        let mut verify_msg = Msg::new(MsgType::VERIFY_ENV);
+        let mut verify_msg = Msg::new(MsgType::VerifyEnv);
         verify_msg.append_str("foo.tar.gz");
         verify_msg.append_str("x86_64");
         send_msg(&mut cssock.stream, &verify_msg);
@@ -213,7 +213,7 @@ pub fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env:
 
     send_compile_file_msg(&mut cssock, job_id);
     send_file(&mut cssock.stream, "/tmp/bar.c");
-    send_msg(&mut cssock.stream, &Msg::new(MsgType::END));
+    send_msg(&mut cssock.stream, &Msg::new(MsgType::End));
     loop {
         display_msg(&mut cssock);
     }
@@ -273,7 +273,7 @@ fn main()
     let mut sched_sock = get_scheduler(&start_udp_discovery(), "icecc-test").unwrap();
     let host_name :String = resolve::hostname::get_hostname().expect("hostname");
     println!("{}", host_name);
-    let mut login_msg = Msg::new(MsgType::LOGIN);
+    let mut login_msg = Msg::new(MsgType::Login);
     login_msg.append_u32(0); // not supporting remote connections so port 0 is fine.
     login_msg.append_u32(8); // not supporting remote connections so this doesn't really matter.
     login_msg.append_u32(0); // no envs.
@@ -283,7 +283,7 @@ fn main()
     login_msg.append_u32(1); // noremote.
     send_msg(&mut sched_sock.stream, &login_msg);
 
-    let mut stats_msg = Msg::new(MsgType::STATS);
+    let mut stats_msg = Msg::new(MsgType::Stats);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
     stats_msg.append_u32(0);
@@ -292,7 +292,7 @@ fn main()
 
     display_msg(&mut sched_sock);
 
-    let mut get_cs_msg = Msg::new(MsgType::GET_CS);
+    let mut get_cs_msg = Msg::new(MsgType::GetCS);
     let envs = vec!(("x86_64", "foo.tar.gz"));
     get_cs_msg.append_envs(envs);
     get_cs_msg.append_str("/tmp/test-icecc.c");

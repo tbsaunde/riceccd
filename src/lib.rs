@@ -102,7 +102,7 @@ pub fn send_msg(sock: &mut TcpStream, msg: &Msg)
     assert!(msg.len() < 1000000);
     let len = [0, (msg.len() >> 16) as u8, (msg.len() >> 8) as u8, msg.len() as u8]; // fix me
     sock.write(&len);
-    let typebuf = [0, 0, 0, msg.msgtype as u8];
+    let typebuf = [0, 0, (msg.msgtype as u16 >> 8) as u8, msg.msgtype as u8];
     sock.write(&typebuf).expect("write type");
     let write_len = sock.write(msg.data.as_slice()).expect("write");
     println!("sent packet type {:?} length {}", msg.msgtype, write_len);

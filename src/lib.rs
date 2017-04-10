@@ -206,7 +206,14 @@ pub fn get_cs(con: &mut MsgChannel, file: &str, lang: SourceLanguage)
 
     // preferred host is to use a particular daemon, we don't support that yet.
     get_cs_msg.append_str("");
-    get_cs_msg.append_u32(0);
+    
+    if con.protocol >= 31 {
+        get_cs_msg.append_u32(0);
+        if con.protocol >= 34 {
+            get_cs_msg.append_u32(0);
+        }
+    }
+
     send_msg(&mut con.stream, &get_cs_msg);
 }
 

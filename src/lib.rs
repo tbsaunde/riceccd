@@ -155,7 +155,7 @@ fn read_string(sock: &mut TcpStream) -> String
     String::from_utf8(buf).expect("parse utf8")
 }
 
-fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
+pub fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
 {
     let mut msg = Msg::new(MsgType::COMPILE_FILE);
     msg.append_u32(0); // language of source
@@ -193,7 +193,7 @@ pub fn get_cs(con: &mut MsgChannel, file: &str, lang: SourceLanguage)
     send_msg(&mut con.stream, &get_cs_msg);
 }
 
-fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: bool)
+pub fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env: bool)
 {
     let mut cssock = MsgChannel::new((host, port as u16));
     if !got_env {

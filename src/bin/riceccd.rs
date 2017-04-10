@@ -1,14 +1,9 @@
 extern crate iceccd;
 
 use iceccd::*;
-use iceccd::MsgChannel;
-use iceccd::Msg;
-use iceccd::MsgType;
-use iceccd::send_msg;
 
 extern crate clap;
 use clap::{Arg, App};
-use std::net::{TcpStream, UdpSocket, ToSocketAddrs};
 
 extern crate get_if_addrs;
 extern crate resolve;
@@ -50,52 +45,8 @@ fn main()
         .get_matches();
     let network = cmd_args.value_of("network").unwrap_or("ICECREAM");
     let local_socket: &str = cmd_args.value_of("socket").unwrap_or("/tmp/riceccd.sock");
-    let ifaces = get_if_addrs::get_if_addrs().expect("qux");
-    let sock = UdpSocket::bind("0.0.0.0:0").expect("error");
-    sock.set_broadcast(true).expect("broadcast");
-    for iface in &ifaces {
-        if iface.is_loopback() {
-            continue;
-        }
 
-        match iface.addr {
-            get_if_addrs::IfAddr::V4(ref addr) => {
-                match addr.broadcast {
-                    Some(ip) => {
-                        let buf = [35];
-                        sock.send_to(&buf, (ip, 8765)).expect("foobar");
-                    }
-                    _ => ()
-                }
-            }
-            _ => ()
-        };
-    }
-
-    println!("sent packet");
-    let mut sched: Option<std::net::SocketAddr>;
-    loop {
-        let mut ans = [0; 30];
-        let (_, s) = sock.recv_from(&mut ans).expect("read");
-        let mut net : String = String::new();
-        for x in &ans {
-            if *x != 0 {
-                net.push(*x as char);
-            }
-        }
-
-        net .remove(0);
-        println!("{} {}", net, net.len());
-        sched = Some(s);
-        if net == network {
-            break;
-        }
-    }
-
-    let mut sched_sock = MsgChannel::new(sched.unwrap());
-    sched_sock.stream.set_nodelay(true).expect("nodelay");
-    // sched_sock.set_nonblocking(true).expect("nonblocking");
-    println!("{:#?}", sched_sock.stream);
+    let mut sched_sock: MsgChannel = get_scheduler(&start_udp_discovery(), network).unwrap();
 
     let host_name :String = resolve::hostname::get_hostname().expect("hostname");
     println!("{}", host_name);

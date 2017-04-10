@@ -45,7 +45,11 @@ fn main()
         .get_matches();
     let network = cmd_args.value_of("network").unwrap_or("ICECREAM");
     let local_socket: &str = cmd_args.value_of("socket").unwrap_or("/tmp/riceccd.sock");
+    run_daemon(network, local_socket);
+}
 
+fn run_daemon(network: & str, local_socket: & str)
+{
     let mut sched_sock: MsgChannel = get_scheduler(&start_udp_discovery(), network).unwrap();
 
     let host_name :String = resolve::hostname::get_hostname().expect("hostname");

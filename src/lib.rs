@@ -177,13 +177,13 @@ fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
     send_msg(&mut stream.stream, &msg);
 }
 
-fn get_cs(con: &mut MsgChannel, file: &str)
+pub fn get_cs(con: &mut MsgChannel, file: &str, lang: SourceLanguage)
 {
     let mut get_cs_msg = Msg::new(MsgType::GET_CS);
     let envs = vec!(("x86_64", "foo.tar.gz"));
     get_cs_msg.append_envs(envs);
     get_cs_msg.append_str(file);
-    get_cs_msg.append_u32(0);
+    get_cs_msg.append_u32(lang as u32);
     get_cs_msg.append_u32(1);
     get_cs_msg.append_str("x86_64");
     get_cs_msg.append_u32(0);
@@ -364,4 +364,12 @@ pub fn get_scheduler(sock: & UdpSocket, network: & str) -> Option<MsgChannel>
     // sched_sock.set_nonblocking(true).expect("nonblocking");
     println!("{:#?}", sched_sock.stream);
     Some(sched_sock)
+}
+
+pub enum SourceLanguage
+{
+    C = 0,
+    CPlusPlus = 1,
+    OBJC = 2,
+    Custom = 3,
 }

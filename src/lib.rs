@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::vec;
-use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{NetworkEndian, ByteOrder};
 
 extern crate get_if_addrs;
 extern crate resolve;
@@ -41,13 +41,15 @@ pub     fn new(msgtype: MsgType) -> Msg
 
 pub     fn append_u32(&mut self, val: u32)
     {
-        self.data.write_u32::<NetworkEndian>(val);
+        let mut buf = [0 ; 4 ];
+        NetworkEndian::write_u32(&mut buf, val);
+        self.data.extend_from_slice(&buf);
     }
 
 pub     fn append_str(&mut self, s: &str)
     {
         self.append_u32((s.len() + 1) as u32);
-        self.data.write(s.as_bytes());
+        self.data.extend_from_slice(s.as_bytes());
         self.data.push(0);
     }
 

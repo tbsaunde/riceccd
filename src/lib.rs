@@ -99,7 +99,7 @@ pub fn new<A: ToSocketAddrs>(addr: A) -> MsgChannel
     }
 }
 
-pub fn send_msg(sock: &mut TcpStream, msg: &Msg)
+pub fn send_msg<W: Write>(mut sock: W, msg: &Msg)
 {
     assert!(msg.len() < 1000000);
     let len = [0, (msg.len() >> 16) as u8, (msg.len() >> 8) as u8, msg.len() as u8]; // fix me

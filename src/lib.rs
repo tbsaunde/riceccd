@@ -110,7 +110,7 @@ pub fn send_msg<W: Write>(mut sock: W, msg: &Msg)
     println!("sent packet type {:?} length {}", msg.msgtype, write_len);
 }
 
-fn send_file(sock: &mut TcpStream, path: &str)
+fn send_file(sock: &TcpStream, path: &str)
 {
     let mut f = File::open(path).expect("open");
     let mut buf: Vec<u8> = Vec::new();
@@ -125,7 +125,7 @@ fn send_file(sock: &mut TcpStream, path: &str)
     }
 }
 
-fn read_u32le(sock: &mut TcpStream) -> u32
+fn read_u32le(mut sock: &TcpStream) -> u32
 {
     let mut buf = [0; 4];
     let ret = sock.read(&mut buf).expect("read 4");
@@ -134,7 +134,7 @@ fn read_u32le(sock: &mut TcpStream) -> u32
     val
 }
 
-fn read_u32be(sock: &mut TcpStream) -> u32
+fn read_u32be(mut sock: &TcpStream) -> u32
 {
     let mut buf = [0; 4];
     let ret = sock.read(&mut buf).expect("read 4");
@@ -143,7 +143,7 @@ fn read_u32be(sock: &mut TcpStream) -> u32
     val
 }
 
-fn read_string(sock: &mut TcpStream) -> String
+fn read_string(mut sock: &TcpStream) -> String
 {
     let len = read_u32be(sock) as usize;
     let mut buf: Vec<u8> = Vec::with_capacity(len);

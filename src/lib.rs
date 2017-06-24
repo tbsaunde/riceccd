@@ -2,7 +2,6 @@ use std::net::{TcpStream, UdpSocket, ToSocketAddrs};
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use std::vec;
 use byteorder::{NetworkEndian, ByteOrder};
 
 extern crate get_if_addrs;
@@ -103,7 +102,7 @@ pub fn send_msg<W: Write>(mut sock: W, msg: &Msg)
 {
     assert!(msg.len() < 1000000);
     let len = [0, (msg.len() >> 16) as u8, (msg.len() >> 8) as u8, msg.len() as u8]; // fix me
-    sock.write(&len);
+    sock.write(&len).expect("writing length");;
     let typebuf = [0, 0, (msg.msgtype as u16 >> 8) as u8, msg.msgtype as u8];
     sock.write(&typebuf).expect("write type");
     let write_len = sock.write(msg.data.as_slice()).expect("write");
@@ -114,7 +113,7 @@ fn send_file(sock: &TcpStream, path: &str)
 {
     let mut f = File::open(path).expect("open");
     let mut buf: Vec<u8> = Vec::new();
-    let len = f.read_to_end(&mut buf).expect("read file");
+    let _ = f.read_to_end(&mut buf).expect("read file");
     for chunk in buf.chunks(100000) {
         let mut fcmsg = Msg::new(MsgType::FileChunk);
         fcmsg.append_u32(chunk.len() as u32);
@@ -256,7 +255,7 @@ pub fn display_msg(sock: &mut MsgChannel)
         92 => {
             let max_scheduler_pong = read_u32be(&mut sock.stream);
             let max_scheduler_ping = read_u32be(&mut sock.stream);
-            let bench_source = read_string(&mut sock.stream);
+            let _bench_source = read_string(&mut sock.stream);
             println!("max scheduler pong {} max scheduler ping {}", max_scheduler_pong, max_scheduler_ping);
         }
         72 => {
@@ -290,7 +289,7 @@ pub fn display_msg(sock: &mut MsgChannel)
         67 => {
             println!("end msg");
         }
-        i =>  { println!("unmatched type {}", msgtype) }
+        i =>  { println!("unmatched type {}", i) }
     }
 }
 

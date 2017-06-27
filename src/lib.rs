@@ -3,10 +3,12 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use byteorder::{NetworkEndian, ByteOrder};
+use std::str;
 
 extern crate get_if_addrs;
 extern crate resolve;
 extern crate byteorder;
+extern crate bytes;
 extern crate minilzo;
 
 #[derive(Copy, Clone,Debug)]
@@ -142,18 +144,15 @@ fn read_u32be(mut sock: &TcpStream) -> u32
     val
 }
 
-fn read_string(mut sock: &TcpStream) -> String
+fn read_string(buf: &mut bytes::BytesMut) -> String
 {
-    let len = read_u32be(sock) as usize;
-    let mut buf: Vec<u8> = Vec::with_capacity(len);
-    buf.resize(len, 0);
-    let mut read :usize = 0;
-    while read < len {
-        let mut buf_slice = &mut buf[read..len];
-        read += sock.read(buf_slice).expect("read string");
-    }
-    buf.pop();
-    String::from_utf8(buf).expect("parse utf8")
+    let len = NetworkEndian::read_u32(&buf.split_to(4)) as usize;
+    assert!(len > 0);
+    let str_data = buf.split_to(len);
+
+    // get rid of '\0'
+    buf.truncate(len - 1);
+    String::from(str::from_utf8(&str_data).expect("valid string"))
 }
 
 pub fn send_compile_file_msg(stream: &mut MsgChannel, job_id :u32)
@@ -247,43 +246,46 @@ pub fn run_job(host: &str, port: u32, host_platform: &str, job_id: u32, got_env:
 pub fn display_msg(sock: &mut MsgChannel)
 {
     let msglen = read_u32be(&mut sock.stream);
-    let msgtype = read_u32be(&mut sock.stream);
+    assert!(msglen >= 4);
+    let mut buf = bytes::BytesMut::with_capacity(msglen as usize);
+    unsafe { buf.set_len(msglen as usize); }
+    sock.stream.read_exact(&mut buf).expect("should get a full message");
+    assert!(msglen as usize == buf.len());
+    let msgtype = NetworkEndian::read_u32(&buf.split_to(4));
     println!("msg length {} type {}", msglen, msgtype);
-    let mut buf: Vec<u8> = Vec::with_capacity(msglen as usize);
-    buf.resize(msglen as usize, 0);
     match msgtype {
         92 => {
-            let max_scheduler_pong = read_u32be(&mut sock.stream);
-            let max_scheduler_ping = read_u32be(&mut sock.stream);
-            let _bench_source = read_string(&mut sock.stream);
+            let max_scheduler_pong = NetworkEndian::read_u32(&buf.split_to(4));
+            let max_scheduler_ping = NetworkEndian::read_u32(&buf.split_to(4));
+            let _bench_source = read_string(&mut buf);
             println!("max scheduler pong {} max scheduler ping {}", max_scheduler_pong, max_scheduler_ping);
         }
         72 => {
             //let ret = sock.read(buf.as_mut_slice()).expect("read buf");
             //println!("data {:?}", buf);
-            let job_id = read_u32be(&mut sock.stream);
-            let port = read_u32be(&mut sock.stream);
-            let host = read_string(&mut sock.stream);
-            let host_platform = read_string(&mut sock.stream);
-            let got_env = read_u32be(&mut sock.stream);
-            let client_id = read_u32be(&mut sock.stream);
-            let matched_job_id = read_u32be(&mut sock.stream);
+            let job_id = NetworkEndian::read_u32(&buf.split_to(4));
+            let port = NetworkEndian::read_u32(&buf.split_to(4));
+            let host = read_string(&mut buf);
+            let host_platform = read_string(&mut buf);
+            let got_env = NetworkEndian::read_u32(&buf.split_to(4));
+            let client_id = NetworkEndian::read_u32(&buf.split_to(4));
+            let matched_job_id = NetworkEndian::read_u32(&buf.split_to(4));
             println!("job {} assigned to {}:{} platform {} got_env {} for client {} matched {}", job_id, host, port, host_platform, got_env, client_id, matched_job_id);
             run_job(&host, port, &host_platform, job_id, got_env != 0);
         }
         94 => {
-            let val = read_u32be(&mut sock.stream);
+            let val = NetworkEndian::read_u32(&buf.split_to(4));
             println!("verification of env is {}", val);
         }
         75 => {
-            let stderr = read_string(&mut sock.stream);
-            let stdout = read_string(&mut sock.stream);
-            let status = read_u32be(&mut sock.stream);
-            let oom = read_u32be(&mut sock.stream);
+            let stderr = read_string(&mut buf);
+            let stdout = read_string(&mut buf);
+            let status = NetworkEndian::read_u32(&buf.split_to(4));
+            let oom = NetworkEndian::read_u32(&buf.split_to(4));
             println!("compile finished status {} stdout {} stderr {}  oom {}", status, stdout, stderr, oom);
         }
         90 => {
-            let str = read_string(&mut sock.stream);
+            let str = read_string(&mut buf);
             println!("status text: {}", str);
         }
         67 => {

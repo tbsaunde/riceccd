@@ -2,7 +2,7 @@ use std::net::{TcpStream, UdpSocket, ToSocketAddrs};
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use byteorder::{NetworkEndian, ByteOrder};
+use byteorder::{NetworkEndian, LittleEndian, ByteOrder};
 use std::str;
 
 extern crate get_if_addrs;
@@ -337,6 +337,8 @@ fn main()
     }
 }
 
+const MAX_PROTOCOL_VERSION : u8 = 35;
+
 pub fn start_udp_discovery() -> UdpSocket
 {
     let ifaces = get_if_addrs::get_if_addrs().expect("qux");
@@ -351,7 +353,7 @@ pub fn start_udp_discovery() -> UdpSocket
             get_if_addrs::IfAddr::V4(ref addr) => {
                 match addr.broadcast {
                     Some(ip) => {
-                        let buf = [35];
+                        let buf = [ MAX_PROTOCOL_VERSION ];
                         sock.send_to(&buf, (ip, 8765)).expect("foobar");
                     }
                     _ => ()
@@ -372,14 +374,26 @@ pub fn get_scheduler(sock: & UdpSocket, network: & str) -> Option<MsgChannel>
         let mut ans = [0; 30];
         let (_, s) = sock.recv_from(&mut ans).expect("read");
         let mut net : String = String::new();
-        for x in &ans {
+        let version_ack = ans[0];
+        let mut offset = 1;
+        let mut sched_version = 0;
+        let mut sched_start = 0;
+        if MAX_PROTOCOL_VERSION + 2 == version_ack {
+            // !!! this depends on the endianness of the scheduler, assume its little endian for
+            // now.
+            sched_version = LittleEndian::read_u32(&ans[1..5]);
+            sched_start = LittleEndian::read_u64(&ans[5..13]);
+            offset += 12;
+        }
+
+        for x in &ans[offset..] {
             if *x != 0 {
                 net.push(*x as char);
             }
         }
 
-        net .remove(0);
-        println!("{} {}", net, net.len());
+        println!("raw: {:?}", &ans);
+        println!("{} {} {} {}", net, net.len(), sched_version, sched_start);
         sched = Some(s);
         if net == network {
             break;
